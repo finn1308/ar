@@ -1,38 +1,177 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artivive Web Clone - Image Tracking AR</title>
+  
+  <!-- Nhúng thư viện A-Frame -->
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <!-- Nhúng thư viện MindAR dành cho A-Frame -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #000;
+    }
+
+    /* Giao diện hướng dẫn ban đầu */
+    #ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 16px;
+      max-width: 400px;
+      line-height: 1.5;
+      margin-bottom: 30px;
+    }
+
+    #start-btn {
+      padding: 15px 30px;
+      font-size: 18px;
+      font-weight: bold;
+      color: white;
+      background-color: #e91e63;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      transition: background-color 0.3s, transform 0.1s;
+    }
+
+    #start-btn:hover {
+      background-color: #d81557;
+    }
+
+    #start-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Thông báo trạng thái quét */
+    #scanning-status {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9);
+      color: #333;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-weight: bold;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+  </style>
 </head>
+<body>
 
-<body style="margin:0">
+  <!-- Màn hình chào mừng và yêu cầu tương tác (để vượt qua chính sách chặn tự động phát video của trình duyệt) -->
+  <div id="ui-overlay">
+    <h1>Trải Nghiệm WebAR</h1>
+    <p>Hãy chuẩn bị bức ảnh mẫu trên một thiết bị khác. Nhấn "Bắt đầu", cho phép truy cập Camera và hướng camera vào bức ảnh để xem điều kỳ diệu!</p>
+    <button id="start-btn">Bắt Đầu Trải Nghiệm</button>
+  </div>
 
-<a-scene 
-  mindar-image="imageTargetSrc: target.mind; maxTrack: 1"
-  embedded
-  color-space="sRGB"
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false"
->
+  <div id="scanning-status">Đang tìm kiếm hình ảnh...</div>
 
-<a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <!-- Cấu hình Scene của A-Frame với MindAR -->
+  <!-- imageTargetSrc: Thay bằng tên file .mind của bạn -->
+  <a-scene 
+    mindar-image="imageTargetSrc: data.mind; autoStart: false; filterMinCF:0.0001; filterBeta: 0.001;" 
+    color-space="sRGB" 
+    renderer="colorManagement: true, physicallyCorrectLights" 
+    vr-mode-ui="enabled: false" 
+    device-orientation-permission-ui="enabled: false">
+    
+    <!-- Quản lý tài nguyên -->
+    <a-assets>
+      <!-- Thay src bằng tên file video của bạn -->
+      <video id="ar-video" 
+             src="video.mp4" 
+             crossorigin="anonymous" 
+             loop="true" 
+             muted="false"
+             playsinline 
+             webkit-playsinline>
+      </video>
+    </a-assets>
 
-<!-- CHỈ 1 TARGET -->
-<a-entity mindar-image-target="targetIndex: 0">
-  <a-video 
-    src="#video"
-    width="1"
-    height="0.6"
-    position="0 0 0">
-  </a-video>
-</a-entity>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-</a-scene>
+    <!-- Entity chứa nội dung AR, targetIndex: 0 nghĩa là nhận diện hình ảnh đầu tiên trong file .mind -->
+    <a-entity id="target" mindar-image-target="targetIndex: 0">
+      <!-- Hiển thị video lên mặt phẳng. Kích thước (width, height) cần tỉ lệ với bức ảnh thật -->
+      <!-- rotation="0 0 0" là đặt video nằm song song với mặt bức ảnh -->
+      <a-video src="#ar-video" position="0 0 0" width="1" height="0.55" rotation="0 0 0"></a-video>
+    </a-entity>
+    
+  </a-scene>
 
-<!-- video -->
-<video id="video" src="video.mp4" autoplay loop muted playsinline></video>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const startBtn = document.querySelector("#start-btn");
+      const uiOverlay = document.querySelector("#ui-overlay");
+      const sceneEl = document.querySelector('a-scene');
+      const videoEl = document.querySelector('#ar-video');
+      const targetEl = document.querySelector('#target');
+      const scanningStatus = document.querySelector('#scanning-status');
 
+      // 1. Khi người dùng nhấn nút "Bắt Đầu"
+      startBtn.addEventListener("click", function() {
+        // Ẩn màn hình chào
+        uiOverlay.style.display = "none";
+        scanningStatus.style.display = "block";
+        
+        // Khởi động hệ thống AR
+        sceneEl.systems["mindar-image-system"].start();
+      });
+
+      // 2. Bắt sự kiện khi Camera NHẬN DIỆN ĐƯỢC hình ảnh
+      targetEl.addEventListener("targetFound", event => {
+        console.log("Đã tìm thấy hình ảnh!");
+        scanningStatus.innerText = "Đang phát video!";
+        scanningStatus.style.backgroundColor = "rgba(76, 175, 80, 0.9)"; // Đổi màu xanh
+        scanningStatus.style.color = "white";
+        
+        // Bắt đầu phát video
+        videoEl.play();
+      });
+
+      // 3. Bắt sự kiện khi Camera MẤT DẤU hình ảnh
+      targetEl.addEventListener("targetLost", event => {
+        console.log("Đã mất dấu hình ảnh!");
+        scanningStatus.innerText = "Đang tìm kiếm hình ảnh...";
+        scanningStatus.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
+        scanningStatus.style.color = "#333";
+        
+        // Tạm dừng video để tiết kiệm tài nguyên
+        videoEl.pause();
+      });
+    });
+  </script>
 </body>
 </html>
