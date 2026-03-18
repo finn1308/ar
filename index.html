@@ -89,27 +89,25 @@
 </head>
 <body>
 
-  <!-- Màn hình chào mừng và yêu cầu tương tác (để vượt qua chính sách chặn tự động phát video của trình duyệt) -->
+  <!-- Màn hình chào mừng và yêu cầu tương tác -->
   <div id="ui-overlay">
     <h1>Trải Nghiệm WebAR</h1>
-    <p>Hãy chuẩn bị bức ảnh mẫu trên một thiết bị khác. Nhấn "Bắt đầu", cho phép truy cập Camera và hướng camera vào bức ảnh để xem điều kỳ diệu!</p>
+    <p>Nhấn "Bắt đầu", cho phép truy cập Camera và hướng camera vào bức ảnh của bạn để xem video!</p>
     <button id="start-btn">Bắt Đầu Trải Nghiệm</button>
   </div>
 
   <div id="scanning-status">Đang tìm kiếm hình ảnh...</div>
 
-  <!-- Cấu hình Scene của A-Frame với MindAR -->
-  <!-- imageTargetSrc: Thay bằng tên file .mind của bạn -->
+  <!-- Cấu hình Scene -->
   <a-scene 
-    mindar-image="imageTargetSrc: data.mind; autoStart: false; filterMinCF:0.0001; filterBeta: 0.001;" 
+    mindar-image="imageTargetSrc: data.mind; autoStart: false; uiScanning: #scanning-status; filterMinCF:0.0001; filterBeta: 0.001;" 
     color-space="sRGB" 
     renderer="colorManagement: true, physicallyCorrectLights" 
     vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
     
-    <!-- Quản lý tài nguyên -->
     <a-assets>
-      <!-- Thay src bằng tên file video của bạn -->
+      <!-- Đảm bảo video.mp4 nằm cùng thư mục với file này -->
       <video id="ar-video" 
              src="video.mp4" 
              crossorigin="anonymous" 
@@ -122,11 +120,10 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- Entity chứa nội dung AR, targetIndex: 0 nghĩa là nhận diện hình ảnh đầu tiên trong file .mind -->
+    <!-- Lưu ý: targetIndex phải khớp với thứ tự ảnh khi bạn tạo file .mind -->
     <a-entity id="target" mindar-image-target="targetIndex: 0">
-      <!-- Hiển thị video lên mặt phẳng. Kích thước (width, height) cần tỉ lệ với bức ảnh thật -->
-      <!-- rotation="0 0 0" là đặt video nằm song song với mặt bức ảnh -->
-      <a-video src="#ar-video" position="0 0 0" width="1" height="0.55" rotation="0 0 0"></a-video>
+      <!-- Tăng kích thước mặc định lên 1x1 để dễ quan sát ban đầu -->
+      <a-video src="#ar-video" position="0 0 0" width="1" height="1" rotation="0 0 0"></a-video>
     </a-entity>
     
   </a-scene>
@@ -140,35 +137,33 @@
       const targetEl = document.querySelector('#target');
       const scanningStatus = document.querySelector('#scanning-status');
 
-      // 1. Khi người dùng nhấn nút "Bắt Đầu"
       startBtn.addEventListener("click", function() {
-        // Ẩn màn hình chào
         uiOverlay.style.display = "none";
         scanningStatus.style.display = "block";
         
         // Khởi động hệ thống AR
         sceneEl.systems["mindar-image-system"].start();
+        
+        // Một số trình duyệt yêu cầu video phải load trước
+        videoEl.load();
       });
 
-      // 2. Bắt sự kiện khi Camera NHẬN DIỆN ĐƯỢC hình ảnh
       targetEl.addEventListener("targetFound", event => {
-        console.log("Đã tìm thấy hình ảnh!");
-        scanningStatus.innerText = "Đang phát video!";
-        scanningStatus.style.backgroundColor = "rgba(76, 175, 80, 0.9)"; // Đổi màu xanh
+        console.log("Tìm thấy ảnh!");
+        scanningStatus.innerText = "Đã nhận diện thành công!";
+        scanningStatus.style.backgroundColor = "#4caf50";
         scanningStatus.style.color = "white";
         
-        // Bắt đầu phát video
-        videoEl.play();
+        // Buộc video phát lại từ đầu khi tìm thấy ảnh
+        videoEl.currentTime = 0;
+        videoEl.play().catch(err => console.log("Lỗi phát video:", err));
       });
 
-      // 3. Bắt sự kiện khi Camera MẤT DẤU hình ảnh
       targetEl.addEventListener("targetLost", event => {
-        console.log("Đã mất dấu hình ảnh!");
-        scanningStatus.innerText = "Đang tìm kiếm hình ảnh...";
+        console.log("Mất dấu!");
+        scanningStatus.innerText = "Đang quét tìm hình ảnh...";
         scanningStatus.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
         scanningStatus.style.color = "#333";
-        
-        // Tạm dừng video để tiết kiệm tài nguyên
         videoEl.pause();
       });
     });
